@@ -25,3 +25,5 @@ rule https-web {
 }
 ```
 The secret sauce is (obviously) applied using the apply-macro statement in the match conditions.
+
+I've been using this script for years.  The fact that it's been working since Junos 9.x is a testament to the quality of Pato's code!
