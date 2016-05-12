@@ -4,6 +4,32 @@ This is Pato's old script that watches for dynamic IP events, and alters an SRX 
 
 This mimics the old ScreenOS behavior that allowed you to create a VIP using the firewall's external IP address (i.e. a port forwarding setup).
 
+## Installing and configuring
+
+1. Drop the script in /var/db/scripts/event
+2. Add it to the event-options config on your SRX:
+
+```
+event-options {
+    policy ip-renew {
+        events SYSTEM;
+        attributes-match {
+            SYSTEM.message matches "EVENT Add";
+        }
+        then {
+            event-script dyn-nat.xslt {
+                arguments {
+                    message "{$$.message}";
+                }
+            }
+        }
+    }
+    event-script {
+        file dyn-nat.xslt;
+    }
+}
+```
+
 Example destination NAT rule (assumes your external interface is ge-0/0/7.0, and that you've got a pool named "web-server" already defined):
 
 ```
