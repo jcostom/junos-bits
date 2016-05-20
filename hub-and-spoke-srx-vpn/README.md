@@ -7,7 +7,7 @@ While this example uses vSRX 12.x, there's no reason these configs shouldn't wor
 In the sample configurations, the root password and the VPN PSK are both "abc123". Please, don't use that in real life. Be smart, choose your passwords and PSKs wisely.
 
 ## The Diagram
-![Diagram](https://raw.githubusercontent.com/jcostom/junos-bits/master/hub-and-spoke-srx-vpn/diagram.png)
+![Diagram](diagram.png)
 
 Obviously, in real life, you won't have a DHCP server hanging around on the Internet, and all 3 firewalls won't have their external interfaces in the same subnet.  These 2 differences between the lab and the real world aren't impactful, happily.
 
