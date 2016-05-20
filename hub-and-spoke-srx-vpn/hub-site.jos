@@ -1,0 +1,237 @@
+system {
+    host-name vsrxhub;
+    root-authentication {
+        encrypted-password "$1$lW7TSfY7$jP1EdPp5IavKrr3aDCwnU1"; ## SECRET-DATA
+    }
+    services {
+        ssh {
+            protocol-version v2;
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any any;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+    }
+    license {
+        autoupdate {
+            url https://ae1.juniper.net/junos/key_retrieval;
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        unit 0 {
+            family inet {
+                address 10.10.10.1/24;
+            }
+        }
+    }
+    ge-0/0/1 {
+        unit 0 {
+            family inet {
+                address 10.0.1.200/24;
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.200.200.1/32;
+            }
+        }
+    }
+    st0 {
+        unit 0 {
+            multipoint;
+            family inet {
+                address 10.100.100.1/24;
+            }
+        }
+    }
+}
+routing-options {
+    router-id 10.200.200.1;
+}
+protocols {
+    ospf {
+        area 0.0.0.0 {
+            interface st0.0 {
+                interface-type p2mp;
+                bfd-liveness-detection {
+                    minimum-interval 500;
+                    multiplier 3;
+                }
+            }
+            interface ge-0/0/1.0 {
+                passive;
+            }
+            interface lo0.0 {
+                passive;
+            }
+        }
+    }
+}
+security {
+    ike {
+        proposal psk-aes128-sha256-group2-28800 {
+            authentication-method pre-shared-keys;
+            dh-group group2;
+            authentication-algorithm sha-256;
+            encryption-algorithm aes-128-cbc;
+            lifetime-seconds 28800;
+        }
+        policy hub-and-spoke {
+            proposals psk-aes128-sha256-group2-28800;
+            pre-shared-key ascii-text "$9$1OpREyeK87NblegoGUHk"; ## SECRET-DATA
+        }
+        gateway sat1 {
+            ike-policy hub-and-spoke;
+            dynamic hostname vsrxsat1;
+            dead-peer-detection interval 60;
+            external-interface ge-0/0/0.0;
+            version v2-only;
+        }
+        gateway sat2 {
+            ike-policy hub-and-spoke;
+            dynamic hostname vsrxsat2;
+            dead-peer-detection interval 60;
+            external-interface ge-0/0/0.0;
+            version v2-only;
+        }
+    }
+    ipsec {
+        proposal esp-aes128-sha256-3600 {
+            protocol esp;
+            authentication-algorithm hmac-sha-256-128;
+            encryption-algorithm aes-128-cbc;
+            lifetime-seconds 3600;
+        }
+        policy hub-and-spoke {
+            perfect-forward-secrecy {
+                keys group2;
+            }
+            proposals esp-aes128-sha256-3600;
+        }
+        vpn sat1 {
+            bind-interface st0.0;
+            ike {
+                gateway sat1;
+                proxy-identity {
+                    local 10.0.1.0/24;
+                    remote 192.168.1.0/24;
+                }
+                ipsec-policy hub-and-spoke;
+            }
+            establish-tunnels immediately;
+        }
+        vpn sat2 {
+            bind-interface st0.0;
+            ike {
+                gateway sat2;
+                proxy-identity {
+                    local 10.0.1.0/24;
+                    remote 192.168.2.0/24;
+                }
+                ipsec-policy hub-and-spoke;
+            }
+            establish-tunnels immediately;
+        }
+    }
+    screen {
+        ids-option untrust-screen {
+            icmp {
+                ping-death;
+            }
+            ip {
+                source-route-option;
+                tear-drop;
+            }
+            tcp {
+                syn-flood {
+                    alarm-threshold 1024;
+                    attack-threshold 200;
+                    source-threshold 1024;
+                    destination-threshold 2048;
+                    queue-size 2000; ## Warning: 'queue-size' is deprecated
+                    timeout 20;
+                }
+                land;
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+        from-zone trust to-zone untrust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+        from-zone untrust to-zone trust {
+            policy default-deny {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    deny;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone trust {
+            tcp-rst;
+            host-inbound-traffic {
+                system-services {
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                ge-0/0/1.0;
+                st0.0;
+            }
+        }
+        security-zone untrust {
+            screen untrust-screen;
+            host-inbound-traffic {
+                system-services {
+                    ping;
+                    ike;
+                }
+            }
+            interfaces {
+                ge-0/0/0.0;
+            }
+        }
+    }
+}
