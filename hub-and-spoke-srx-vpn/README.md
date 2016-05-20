@@ -9,6 +9,8 @@ In the sample configurations, the root password and the VPN PSK are both "abc123
 ## The Diagram
 ![Diagram](https://raw.githubusercontent.com/jcostom/junos-bits/master/hub-and-spoke-srx-vpn/diagram.png)
 
+Obviously, in real life, you won't have a DHCP server hanging around on the Internet, and all 3 firewalls won't have their external interfaces in the same subnet.  These 2 differences between the lab and the real world aren't impactful, happily.
+
 ## The View From the Hub
 
 ```
