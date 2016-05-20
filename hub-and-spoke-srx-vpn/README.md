@@ -6,6 +6,9 @@ While this example uses vSRX 12.x, there's no reason these configs shouldn't wor
 
 In the sample configurations, the root password and the VPN PSK are both "abc123". Please, don't use that in real life. Be smart, choose your passwords and PSKs wisely.
 
+## The Diagram
+![Diagram](https://raw.githubusercontent.com/jcostom/junos-bits/master/hub-and-spoke-srx-vpn/diagram.png)
+
 ## The View From the Hub
 
 ```

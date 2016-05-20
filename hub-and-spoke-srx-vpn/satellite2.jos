@@ -209,7 +209,6 @@ security {
                     ping;
                     dhcp;
                     ike;
-                    ssh;
                 }
             }
             interfaces {
