@@ -53,3 +53,5 @@ rule https-web {
 The secret sauce is (obviously) applied using the apply-macro statement in the match conditions.
 
 I've been using this script for years.  The fact that it's been working since Junos 9.x is a testament to the quality of Pato's code!
+
+I'm expecting to need to rewrite this in Python some time in 2016-2017, when all SRX branch gets on-box Python & PyEZ, given the strategic direction of moving away from SLAX and XSLT in favor of Python.
