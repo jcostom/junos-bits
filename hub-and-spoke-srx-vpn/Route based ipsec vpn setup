@@ -1,0 +1,140 @@
+For those who might be interested, I am working on a PoC where I have been asked to demonstrate a route based IPSEC VPN scenario that must be encrypted. So I mocked up a small example and thought I would share if this ever comes up as a need at your customer.
+ 
+You can play around with the ike/ipsec auth, dh-group, encryption, mode, establish tunnel, etc. to get a feel for the different options. Also make sure your interfaces are in the right zones.
+ 
+Topology
+
+Criteria:
+¥	SRX Headend must communicate with SRX Branch securely via the public network.
+◦	First, I used my home device to do this, otherwise I would have shown the network cloud between the two devices with different IP space. I could have mock up a router to represent the cloud, but was to lazy.
+¥	This was a multi-step setup, fairly easy to do once I went back and re-studied what was needed
+◦	Step 1 – Configure IKE protocol to set up the dynamic tunnel between SRX’s
+▪	IKE works in 2 phases
+▪	Phase 1 (None as P1) sets up a secure channel for communications between devices
+▪	Phase 2 (Noe as P2) sets up the VPN tunnel for user traffic. This tunnel is inside the P1 channel
+Headend
+set security ike proposal IKE-PROP authentication-method pre-shared-keys
+set security ike proposal IKE-PROP dh-group group5
+set security ike proposal IKE-PROP authentication-algorithm sha1
+set security ike proposal IKE-PROP encryption-algorithm aes-128-cbc
+set security ike proposal IKE-PROP lifetime-seconds 3600
+ 
+set security ike policy IKE_POL mode main
+set security ike policy IKE_POL proposals IKE-PROP
+set security ike policy IKE_POL pre-shared-key ascii-text “$9$RmJcrvxNboJDWLJDikTQEcy"
+ 
+set security ike gateway IKE_GW ike-policy IKE_POL
+set security ike gateway IKE_GW address 1.1.1.2
+set security ike gateway IKE_GW external-interface fe-0/0/3.0
+ 
+set security zones security-zone untrust host-inbound-traffic system-services ike
+ 
+*** SRX Branch is the same configuration except the IKE_GW address is for SRX Headend
+ 
+◦	Step 2 Configure IKE Phase 2 on both devices
+set security ipsec proposal IPSEC_PROP protocol esp
+set security ipsec proposal IPSEC_PROP authentication-algorithm hmac-sha1-96
+set security ipsec proposal IPSEC_PROP encryption-algorithm aes-128-cbc
+set security ipsec proposal IPSEC_PROP lifetime-seconds 3600
+ 
+set security ipsec policy IPSEC_POL perfect-forward-secrecy keys group5
+set security ipsec policy IPSEC_POL proposals IPSEC_PROP
+ 
+set security ipsec vpn IPSEC_VPN bind-interface st0.1
+set security ipsec vpn IPSEC_VPN vpn-monitor
+set security ipsec vpn IPSEC_VPN ike gateway IKE_GW
+set security ipsec vpn IPSEC_VPN ike ipsec-policy IPSEC_POL
+set security ipsec vpn IPSEC_VPN establish-tunnels immediately
+ 
+◦	Step 3 Configure tunnel interface and routing
+Both device
+set interfaces st0 unit 1 family inet
+set security zones security-zone VPN interfaces st0.1
+ 
+SRX Headend
+set routing-options static route 10.2.2.0/24 next-hop st0.1
+ 
+SRX Branch
+set routing-options static route 10.1.1.0/24 next-hop st0.1
+ 
+◦	Step 3 Security Policies
+Address book (both devices)
+set security address-book global address Network-A 10.1.1.0/24
+set security address-book global address Network-B 10.2.2.0/24
+ 
+Security Policy Headend
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match source-address Network-A
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match destination-address Network-B
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match application any
+set security policies from-zone trust to-zone VPN policy trust-to-VPN then permit
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match source-address Network-B
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match destination-address Network-A
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match application any
+set security policies from-zone VPN to-zone trust policy VPN-to-trust then permit
+ 
+Security Policy Branch
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match source-address Network-B
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match destination-address Network-A
+set security policies from-zone trust to-zone VPN policy trust-to-VPN match application any
+set security policies from-zone trust to-zone VPN policy trust-to-VPN then permit
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match source-address Network-A
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match destination-address Network-B
+set security policies from-zone VPN to-zone trust policy VPN-to-trust match application any
+set security policies from-zone VPN to-zone trust policy VPN-to-trust then permit
+ 
+◦	Step 4 Validation
+ 
+To verify the VPN (do from both sides)
+root@srx_branch> show security ike security-associations
+Index   State  Initiator cookie  Responder cookie  Mode           Remote Address
+2045970 UP     fcf792ad14f8e796  1d062d0bf2b110c1  Main           1.1.1.1
+ 
+root@srx_branch> show security ipsec security-associations
+  Total active tunnels: 1
+  ID    Algorithm       SPI      Life:sec/kb  Mon lsys Port  Gateway
+  <131073 ESP:aes-128/sha1 804689fb 671/ unlim U   root 500   1.1.1.1
+  >131073 ESP:aes-128/sha1 95263100 671/ unlim U   root 500   1.1.1.1
+ 
+root@srx_branch> show security ipsec statistics
+ESP Statistics:
+  Encrypted bytes:            89224
+  Decrypted bytes:            49308
+  Encrypted packets:            587
+  Decrypted packets:            587
+AH Statistics:
+  Input bytes:                    0
+  Output bytes:                   0
+  Input packets:                  0
+  Output packets:                 0
+Errors:
+  AH authentication failures: 0, Replay errors: 0
+  ESP authentication failures: 0, ESP decryption failures: 0
+  Bad headers: 0, Bad trailers: 0
+ 
+root@srx_branch> show route
+ 
+inet.0: 4 destinations, 4 routes (4 active, 0 holddown, 0 hidden)
++ = Active Route, - = Last Active, * = Both
+ 
+1.1.1.0/30         *[Direct/0] 00:56:10
+                    > via fe-0/0/3.0
+1.1.1.2/32         *[Local/0] 00:56:10
+                      Local via fe-0/0/3.0
+10.1.1.0/24        *[Static/5] 00:49:02
+                    > via st0.1
+192.168.1.1/32     *[Local/0] 3d 04:50:20
+                      Reject
+ 
+root@srx_branch> ping 1.1.1.1
+PING 1.1.1.1 (1.1.1.1): 56 data bytes
+64 bytes from 1.1.1.1: icmp_seq=0 ttl=64 time=3.282 ms
+64 bytes from 1.1.1.1: icmp_seq=1 ttl=64 time=3.619 ms
+64 bytes from 1.1.1.1: icmp_seq=2 ttl=64 time=3.213 ms
+64 bytes from 1.1.1.1: icmp_seq=3 ttl=64 time=3.357 ms
+64 bytes from 1.1.1.1: icmp_seq=4 ttl=64 time=3.165 ms
+^C
+— 1.1.1.1 ping statistics —
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 3.165/3.327/3.619/0.160 ms
+ 
+root@srx_branch>
