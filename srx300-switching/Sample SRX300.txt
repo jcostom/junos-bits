@@ -1,0 +1,371 @@
+system {
+    host-name srx01;
+    domain-name somecompany.com;
+    time-zone America/New_York;
+    root-authentication {
+        encrypted-password "<redacted>";
+    }
+    name-server {
+        208.67.220.220;
+        208.67.222.222;
+    }
+    login {
+        user admin {
+            uid 2000;
+            class super-user;
+            authentication {
+                encrypted-password "<redacted>";
+            }
+        }
+    }
+    services {
+        ssh {
+            protocol-version v2;
+        }
+        dhcp-local-server {
+            group LAN-GROUP {
+                interface irb.3;
+            }
+        }
+        web-management {
+            http {
+                interface irb.3;
+            }
+            https {
+                system-generated-certificate;
+                interface irb.3;
+            }
+            session {
+                idle-timeout 60;
+            }
+        }
+    }
+    syslog {
+        archive size 100k files 3;
+        user * {
+            any emergency;
+        }
+        host log {
+            any notice;
+            security any;
+            kernel info;
+            pfe info;
+            interactive-commands any;
+        }
+        allow-duplicates;
+        file messages {
+            any critical;
+            authorization info;
+            structured-data;
+        }
+        file interactive-commands {
+            interactive-commands error;
+            structured-data;
+        }
+        file policy_session {
+            user info;
+            match RT_FLOW;
+            archive size 2048000 world-readable;
+            structured-data;
+        }
+        file default-log-messages {
+            any info;
+            match "(requested 'commit' operation)|(copying configuration to juniper.save)|(commit complete)|ifAdminStatus|(FRU power)|(FRU removal)|(FRU insertion)|(link UP)|transitioned|Transferred|transfer-file|(license add)|(license delete)|(package -X update)|(package -X delete)|(FRU Online)|(FRU Offline)|(plugged in)|(unplugged)|GRES|(AIS_DATA_AVAILABLE);";
+            structured-data;
+        }
+        time-format year;
+    }
+    max-configurations-on-flash 5;
+    max-configuration-rollbacks 15;
+    license {
+        autoupdate {
+            url https://ae1.juniper.net/junos/key_retrieval;
+        }
+    }
+    ntp {
+        server us.ntp.pool.org;
+    }
+}
+services {
+    application-identification {
+        download {
+            automatic {
+                start-time 07-15.02:00;
+                interval 12;
+            }
+        }
+        statistics {
+            interval 4;
+        }
+    }
+}
+security {
+    log {
+        cache;
+        mode event;
+        format syslog;
+    }
+    address-book {
+        global {
+            address Internal 10.0.0.0/24;
+            address Outside 1.2.3.155/32;
+        }
+    }
+    application-tracking {
+        first-update;
+        session-update-interval 4;
+    }
+    flow {
+        tcp-mss {
+            ipsec-vpn {
+                mss 1300;
+            }
+        }
+    }
+    screen {
+        ids-option untrust-screen {
+            icmp {
+                ping-death;
+            }
+            ip {
+                source-route-option;
+                tear-drop;
+            }
+            tcp {
+                syn-flood {
+                    alarm-threshold 1024;
+                    attack-threshold 200;
+                    source-threshold 1024;
+                    destination-threshold 2048;
+                    timeout 20;
+                }
+                land;
+            }
+        }
+    }
+    nat {
+        source {
+            rule-set to-internet {
+                from zone Internal;
+                to zone Outside;
+                rule nat-all {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                            interface;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    policies {
+        from-zone Outside to-zone Internal {
+            policy Default_Policy {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    log {
+                        session-init;
+                    }
+                    count;
+                }
+            }
+        }
+        from-zone Internal to-zone Outside {
+            policy All_Internal_Outside {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    log {
+                        session-init;
+                    }
+                    count;
+                }
+            }
+        }
+        from-zone Internal to-zone Internal {
+            policy Allow_All_Internal {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                    log {
+                        session-init;
+                    }
+                }
+            }
+        }
+    }
+    zones {
+        security-zone Internal {
+            host-inbound-traffic {
+                system-services {
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                irb.3;
+            }
+            application-tracking;
+        }
+        security-zone Outside {
+            host-inbound-traffic {
+                system-services {
+                    dhcp;
+                    dns;
+                    ike;
+                    traceroute;
+                    ping;
+                }
+            }
+            interfaces {
+                ge-0/0/0.0;
+            }
+            application-tracking;
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        unit 0 {
+            family inet {
+                address 1.2.3.155/29;
+            }
+        }
+    }
+    ge-0/0/1 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/2 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/3 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/4 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/5 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/6 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    ge-0/0/7 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members vlan3;
+                }
+            }
+        }
+    }
+    irb {
+        unit 3 {
+            family inet {
+                address 10.0.0.254/24;
+            }
+        }
+    }
+}
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop 1.2.3.153;
+    }
+}
+protocols {
+    l2-learning {
+        global-mode switching;
+    }
+}
+access {
+    address-assignment {
+        pool LAN {
+            family inet {
+                network 10.0.0.0/24;
+                range LAN-RANGE {
+                    low 10.0.0.10;
+                    high 10.0.0.100;
+                }
+                dhcp-attributes {
+                    maximum-lease-time 28800;
+                    domain-name somecompany.com;
+                    name-server {
+                        208.67.220.220;
+                        208.67.222.222;
+                    }
+                    router {
+                        10.0.0.254;
+                    }
+                }
+            }
+        }
+    }
+}
+vlans {
+    vlan3 {
+        vlan-id 3;
+        l3-interface irb.3;
+    }
+}
