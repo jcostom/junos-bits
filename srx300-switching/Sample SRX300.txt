@@ -45,13 +45,6 @@ system {
         user * {
             any emergency;
         }
-        host log {
-            any notice;
-            security any;
-            kernel info;
-            pfe info;
-            interactive-commands any;
-        }
         allow-duplicates;
         file messages {
             any critical;
