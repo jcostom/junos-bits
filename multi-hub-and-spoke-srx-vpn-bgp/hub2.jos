@@ -103,6 +103,7 @@ policy-options {
             from interface [ ge-0/0/2.0 lo0.0 ];
             then {
                 community add hub2;
+                next-hop self;
                 accept;
             }
         }
@@ -110,6 +111,7 @@ policy-options {
             from protocol bgp;
             then {
                 community add hub2;
+                next-hop self;
                 accept;
             }
         }
