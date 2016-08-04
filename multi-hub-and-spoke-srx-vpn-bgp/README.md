@@ -20,29 +20,29 @@ In networking, deterministic network behavior is often highly prized.  In our ex
 ```
 root@vsrxhub1> show security ike security-associations
 Index   State  Initiator cookie  Responder cookie  Mode           Remote Address
-4947341 UP     13e94ca11dd1b09b  59d3f777345ff6b2  IKEv2          10.10.10.102
-4947340 UP     7bd91e36848ee6ac  49570bdff8de1008  IKEv2          10.10.10.101
+3126079 UP     acc688c41a029562  6c4de2ff1014f7e1  IKEv2          10.10.10.102
+3126078 UP     e4ba2d43cfadf3c2  185a67bf1af52101  IKEv2          10.10.10.101
 
 root@vsrxhub1> show security ipsec security-associations
   Total active tunnels: 2
   ID    Algorithm       SPI      Life:sec/kb  Mon lsys Port  Gateway
-  <268173313 ESP:aes-cbc-128/sha256 a885ad70 1521/ unlim - root 500 10.10.10.101
-  >268173313 ESP:aes-cbc-128/sha256 ca783dd8 1521/ unlim - root 500 10.10.10.101
-  <268173314 ESP:aes-cbc-128/sha256 c2146cad 1508/ unlim - root 500 10.10.10.102
-  >268173314 ESP:aes-cbc-128/sha256 cd818e3d 1508/ unlim - root 500 10.10.10.102
+  <268173313 ESP:aes-cbc-128/sha256 f31c0d6d 3429/ unlim - root 500 10.10.10.101
+  >268173313 ESP:aes-cbc-128/sha256 2267ff45 3429/ unlim - root 500 10.10.10.101
+  <268173314 ESP:aes-cbc-128/sha256 7f84742d 3430/ unlim - root 500 10.10.10.102
+  >268173314 ESP:aes-cbc-128/sha256 e740b41a 3430/ unlim - root 500 10.10.10.102
 
 root@vsrxhub1> show bgp summary
 Groups: 2 Peers: 3 Down peers: 0
 Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
-inet.0                 9          6          0          0          0          0
+inet.0                13          6          0          0          0          0
 Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
-10.11.11.1            65000         94         94       0       0       40:02 2/5/5/0              0/0/0/0
-10.100.100.101        65000        188        195       0       0     1:24:12 2/2/2/0              0/0/0/0
-10.100.100.102        65000        189        197       0       0     1:24:16 2/2/2/0              0/0/0/0
+10.11.11.1            65000         11         11       0       0        2:38 2/9/9/0              0/0/0/0
+10.100.100.101        65000          8         11       0       0        2:48 2/2/2/0              0/0/0/0
+10.100.100.102        65000         10         12       0       0        2:48 2/2/2/0              0/0/0/0
 
 root@vsrxhub1> show route terse protocol bgp
 
-inet.0: 15 destinations, 18 routes (15 active, 0 holddown, 0 hidden)
+inet.0: 15 destinations, 22 routes (15 active, 0 holddown, 0 hidden)
 + = Active Route, - = Last Active, * = Both
 
 A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
@@ -51,10 +51,14 @@ A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
 * 10.101.101.0/24    B 170        100            >10.11.11.1       I
 * 10.200.200.2/32    B 170        100            >10.11.11.1       I
 * 10.200.200.101/32  B 170        100            >10.100.100.101   I
+                     B 170        100            >10.11.11.1       I
 * 10.200.200.102/32  B 170        100            >10.100.100.102   I
+                     B 170        100            >10.11.11.1       I
   192.168.1.0/24     B 170        100            >10.11.11.1       I
 * 192.168.101.0/24   B 170        100            >10.100.100.101   I
+                     B 170        100            >10.11.11.1       I
 * 192.168.102.0/24   B 170        100            >10.100.100.102   I
+                     B 170        100            >10.11.11.1       I
 
 management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```
@@ -62,39 +66,43 @@ management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```
 root@vsrxsat1> show security ike security-associations
 Index   State  Initiator cookie  Responder cookie  Mode           Remote Address
-1263427 UP     7bd91e36848ee6ac  49570bdff8de1008  IKEv2          10.10.10.1
-1263426 UP     824efd2d6305d40a  5ef06205b0778212  IKEv2          10.10.10.2
+5622801 UP     836a72557a4de2f6  d00b27c3a11f8082  IKEv2          10.10.10.2
+5622800 UP     e4ba2d43cfadf3c2  185a67bf1af52101  IKEv2          10.10.10.1
 
 root@vsrxsat1> show security ipsec security-associations
   Total active tunnels: 2
   ID    Algorithm       SPI      Life:sec/kb  Mon lsys Port  Gateway
-  <131074 ESP:aes-cbc-128/sha256 ca783dd8 1020/ unlim U root 500 10.10.10.1
-  >131074 ESP:aes-cbc-128/sha256 a885ad70 1020/ unlim U root 500 10.10.10.1
-  <131073 ESP:aes-cbc-128/sha256 d4f041d 776/ unlim U root 500 10.10.10.2
-  >131073 ESP:aes-cbc-128/sha256 6e9720ea 776/ unlim U root 500 10.10.10.2
+  <131073 ESP:aes-cbc-128/sha256 2267ff45 3367/ unlim U root 500 10.10.10.1
+  >131073 ESP:aes-cbc-128/sha256 f31c0d6d 3367/ unlim U root 500 10.10.10.1
+  <131074 ESP:aes-cbc-128/sha256 17933245 3367/ unlim U root 500 10.10.10.2
+  >131074 ESP:aes-cbc-128/sha256 9bb2d172 3367/ unlim U root 500 10.10.10.2
 
 root@vsrxsat1> show bgp summary
 Groups: 1 Peers: 2 Down peers: 0
 Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
 inet.0                12          5          0          0          0          0
 Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
-10.100.100.1          65000        214        207       0       2     1:32:28 4/6/6/0              0/0/0/0
-10.101.101.1          65000        293        285       0       2     1:36:25 1/6/6/0              0/0/0/0
+10.100.100.1          65000         12         10       0       0        3:51 5/6/6/0              0/0/0/0
+10.101.101.1          65000         14         11       0       0        3:52 0/6/6/0              0/0/0/0
 
 root@vsrxsat1> show route terse protocol bgp
 
-inet.0: 14 destinations, 21 routes (14 active, 0 holddown, 4 hidden)
+inet.0: 14 destinations, 21 routes (14 active, 0 holddown, 0 hidden)
 + = Active Route, - = Last Active, * = Both
 
 A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
+  10.100.100.0/24    B 170         50            >10.101.101.1     I
+  10.101.101.0/24    B 170        150            >10.100.100.1     I
 * 10.200.200.1/32    B 170        150            >10.100.100.1     I
-* 10.200.200.2/32    B 170         50            >10.101.101.1     I
-* 10.200.200.102/32  B 170        150            >10.100.100.102   I
-                     B 170         50            >10.101.101.102   I
+                     B 170         50            >10.101.101.1     I
+* 10.200.200.2/32    B 170        150            >10.100.100.1     I
+                     B 170         50            >10.101.101.1     I
+* 10.200.200.102/32  B 170        150            >10.100.100.1     I
+                     B 170         50            >10.101.101.1     I
 * 192.168.1.0/24     B 170        150            >10.100.100.1     I
                      B 170         50            >10.101.101.1     I
-* 192.168.102.0/24   B 170        150            >10.100.100.102   I
-                     B 170         50            >10.101.101.102   I
+* 192.168.102.0/24   B 170        150            >10.100.100.1     I
+                     B 170         50            >10.101.101.1     I
 
 management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```
