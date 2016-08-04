@@ -1,0 +1,303 @@
+system {
+    host-name vsrxhub2;
+    root-authentication {
+        encrypted-password "$1$cHQ1mWlL$CiDM6EgbHfJbJWwpvXvbL."; ## SECRET-DATA
+    }
+    services {
+        ssh;
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any any;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+    }
+    license {
+        autoupdate {
+            url https://ae1.juniper.net/junos/key_retrieval;
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        description "OOB Management LAN";
+        unit 0 {
+            family inet {
+                address 10.0.1.201/24;
+            }
+        }
+    }
+    ge-0/0/1 {
+        description WAN;
+        unit 0 {
+            family inet {
+                address 10.10.10.2/24;
+            }
+        }
+    }
+    ge-0/0/2 {
+        description LAN;
+        unit 0 {
+            family inet {
+                address 192.168.1.2/24;
+            }
+        }
+    }
+    ge-0/0/3 {
+        description "Hub Interconnect";
+        unit 0 {
+            family inet {
+                address 10.11.11.1/31;
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.200.200.2/32;
+            }
+        }
+    }
+    st0 {
+        unit 0 {
+            multipoint;
+            family inet {
+                address 10.101.101.1/24;
+            }
+        }
+    }
+}
+routing-options {
+    router-id 10.200.200.2;
+    autonomous-system 65000;
+}
+protocols {
+    bgp {
+        bfd-liveness-detection {
+            minimum-interval 500;
+            multiplier 3;
+        }
+        group hub-and-spoke-vpn {
+            type internal;
+            export bgp-exports;
+            cluster 1.1.1.1;
+            neighbor 10.101.101.101;
+            neighbor 10.101.101.102;
+        }
+        group hubs {
+            type internal;
+            export rr-bgp-exports;
+            neighbor 10.11.11.0;
+        }
+    }
+}
+policy-options {
+    policy-statement bgp-exports {
+        term 1 {
+            from interface [ ge-0/0/2.0 lo0.0 ];
+            then {
+                community add hub2;
+                accept;
+            }
+        }
+        term 2 {
+            from protocol bgp;
+            then {
+                community add hub2;
+                accept;
+            }
+        }
+        term last {
+            then reject;
+        }
+    }
+    policy-statement rr-bgp-exports {
+        term 1 {
+            from protocol [ bgp direct ];
+            then accept;
+        }
+        term last {
+            then reject;
+        }
+    }
+    community hub2 members 65000:2;
+}
+security {
+    ike {
+        proposal psk-aes128-sha256-group2-28800 {
+            authentication-method pre-shared-keys;
+            dh-group group2;
+            authentication-algorithm sha-256;
+            encryption-algorithm aes-128-cbc;
+            lifetime-seconds 28800;
+        }
+        policy hub-and-spoke {
+            proposals psk-aes128-sha256-group2-28800;
+            pre-shared-key ascii-text "$9$1OpREyeK87NblegoGUHk"; ## SECRET-DATA
+        }
+        gateway vsrxsat1 {
+            ike-policy hub-and-spoke;
+            dynamic hostname vsrxsat1;
+            dead-peer-detection interval 60;
+            external-interface ge-0/0/1.0;
+            version v2-only;
+        }
+        gateway vsrxsat2 {
+            ike-policy hub-and-spoke;
+            dynamic hostname vsrxsat2;
+            dead-peer-detection interval 60;
+            external-interface ge-0/0/1.0;
+            version v2-only;
+        }
+    }
+    ipsec {
+        proposal esp-aes128-sha256-3600 {
+            protocol esp;
+            authentication-algorithm hmac-sha-256-128;
+            encryption-algorithm aes-128-cbc;
+            lifetime-seconds 3600;
+        }
+        policy hub-and-spoke {
+            perfect-forward-secrecy {
+                keys group2;
+            }
+            proposals esp-aes128-sha256-3600;
+        }
+        vpn vsrxsat1 {
+            bind-interface st0.0;
+            ike {
+                gateway vsrxsat1;
+                proxy-identity {
+                    local 192.168.1.0/24;
+                    remote 192.168.101.0/24;
+                }
+                ipsec-policy hub-and-spoke;
+            }
+            establish-tunnels immediately;
+        }
+        vpn vsrxsat2 {
+            bind-interface st0.0;
+            ike {
+                gateway vsrxsat2;
+                proxy-identity {
+                    local 192.168.1.0/24;
+                    remote 192.168.102.0/24;
+                }
+                ipsec-policy hub-and-spoke;
+            }
+            establish-tunnels immediately;
+        }
+    }
+    screen {
+        ids-option untrust-screen {
+            icmp {
+                ping-death;
+            }
+            ip {
+                source-route-option;
+                tear-drop;
+            }
+            tcp {
+                syn-flood {
+                    alarm-threshold 1024;
+                    attack-threshold 200;
+                    source-threshold 1024;
+                    destination-threshold 2048;
+                    queue-size 2000; ## Warning: 'queue-size' is deprecated
+                    timeout 20;
+                }
+                land;
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone trust {
+            policy default-trust-trust {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+        from-zone trust to-zone untrust {
+            policy default-trust-untrust {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+        from-zone untrust to-zone trust {
+            policy default-deny {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    deny;
+                }
+            }
+        }
+    }
+    zones {
+        functional-zone management {
+            interfaces {
+                ge-0/0/0.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            all;
+                        }
+                    }
+                }
+            }
+        }
+        security-zone untrust {
+            host-inbound-traffic {
+                system-services {
+                    ping;
+                    ike;
+                }
+            }
+            interfaces {
+                ge-0/0/1.0;
+            }
+        }
+        security-zone trust {
+            host-inbound-traffic {
+                system-services {
+                    all;
+                }
+                protocols {
+                    all;
+                }
+            }
+            interfaces {
+                lo0.0;
+                ge-0/0/2.0;
+                ge-0/0/3.0
+                st0.0;
+            }
+        }
+    }
+}
+routing-instances {
+    management {
+        instance-type virtual-router;
+        interface ge-0/0/0.0;
+    }
+}

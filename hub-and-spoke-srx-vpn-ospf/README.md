@@ -1,4 +1,4 @@
-# Example Hub & Spoke VPN on SRX
+# Example Hub & Spoke VPN on SRX with OSPF
 
 This is an example showing 3 sites, a hub and 2 satellite locations.  Both satellite locations are DHCP assigned, as one might expect from on a cable modem connection.
 
