@@ -92,6 +92,7 @@ protocols {
         }
         group hubs {
             type internal;
+            import rr-bgp-import;
             export rr-bgp-exports;
             neighbor 10.11.11.0;
         }
@@ -114,6 +115,15 @@ policy-options {
                 next-hop self;
                 accept;
             }
+        }
+        term last {
+            then reject;
+        }
+    }
+    policy-statement rr-bgp-exports {
+        term 1 {
+            from protocol [ bgp direct ];
+            then accept;
         }
         term last {
             then reject;

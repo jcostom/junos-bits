@@ -14,7 +14,7 @@ It's also worth noting that each vSRX has its ge-0/0/0 interface as a management
 As you've surmised, this isn't a 100% real-life configuration, as you won't have WAN-side IP addresses all in the same /24, but you still get the idea.
 
 ## Determinism in Routing
-In networking, deterministic network behavior is often highly prized.  In our example here, the satellite locations all prefer to send their traffic via their VPN tunnels to vsrxhub1. This is being accomplished using a BGP import policy on the satellites.  This policy alters the BGP localpref attribute based on which peer it learned the route from.  To keep this classification process simple, our hubs are adding a BGP community tag to all routes being advertised to the satellites. Each hub is using its own community tag, so it's quite easy to differentiate a route learned from hub1 vs hub2.  In our example, routes learned from hub1 get 50 added to the localpref, and routes learned from hub2 have 50 subtracted from the localpref.  Thus, routes learned from hub1 will have localpref 150, while routes learned from hub2 will have localpref 50.  When comparing localpref values, higher is more desirable, so hub1 will always be preferred over hub2.
+In networking, deterministic network behavior is often highly prized.  In our example here, the satellite locations all prefer to send their traffic via their VPN tunnels to vsrxhub1. This is being accomplished using a BGP import policy on the satellites.  This policy alters the BGP localpref attribute based on which peer it learned the route from.  To keep this classification process simple, our hubs are adding a BGP community tag to all routes being advertised to the satellites. Each hub is using its own community tag, so it's quite easy to differentiate a route learned from hub1 vs hub2.  In our example, routes learned from hub1 get 50 added to the localpref, and routes learned from hub2 have 50 subtracted from the localpref.  Thus, routes learned from hub1 will have localpref 150, while routes learned from hub2 will have localpref 50.  When comparing localpref values, higher is more desirable, so hub1 will always be preferred over hub2.  Similarly, we subtract 50 on the hubs from routes we learn from the other hub, to ensure that we'll always prefer a direct VPN connection to a spoke site, rather than send via the other hub.
 
 ## The View From One of the Hubs
 ```
@@ -46,19 +46,19 @@ inet.0: 15 destinations, 22 routes (15 active, 0 holddown, 0 hidden)
 + = Active Route, - = Last Active, * = Both
 
 A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
-  10.10.10.0/24      B 170        100            >10.11.11.1       I
-  10.11.11.0/31      B 170        100            >10.11.11.1       I
-* 10.101.101.0/24    B 170        100            >10.11.11.1       I
-* 10.200.200.2/32    B 170        100            >10.11.11.1       I
+  10.10.10.0/24      B 170         50            >10.11.11.1       I
+  10.11.11.0/31      B 170         50            >10.11.11.1       I
+* 10.101.101.0/24    B 170         50            >10.11.11.1       I
+* 10.200.200.2/32    B 170         50            >10.11.11.1       I
 * 10.200.200.101/32  B 170        100            >10.100.100.101   I
-                     B 170        100            >10.11.11.1       I
+                     B 170         50            >10.11.11.1       I
 * 10.200.200.102/32  B 170        100            >10.100.100.102   I
-                     B 170        100            >10.11.11.1       I
-  192.168.1.0/24     B 170        100            >10.11.11.1       I
+                     B 170         50            >10.11.11.1       I
+  192.168.1.0/24     B 170         50            >10.11.11.1       I
 * 192.168.101.0/24   B 170        100            >10.100.100.101   I
-                     B 170        100            >10.11.11.1       I
+                     B 170         50            >10.11.11.1       I
 * 192.168.102.0/24   B 170        100            >10.100.100.102   I
-                     B 170        100            >10.11.11.1       I
+                     B 170         50            >10.11.11.1       I
 
 management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```

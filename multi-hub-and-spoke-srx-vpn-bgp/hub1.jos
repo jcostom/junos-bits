@@ -92,6 +92,7 @@ protocols {
         }
         group hubs {
             type internal;
+            import rr-bgp-import;
             export rr-bgp-exports;
             neighbor 10.11.11.1;
         }
@@ -126,6 +127,14 @@ policy-options {
         }
         term last {
             then reject;
+        }
+    }
+    policy-statement rr-bgp-import {
+        term 1 {
+            then {
+                local-preference subtract 50;
+                accept;
+            }
         }
     }
     community hub1 members 65000:1;
