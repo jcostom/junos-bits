@@ -49,14 +49,6 @@ interfaces {
             }
         }
     }
-    ge-0/0/3 {
-        description "Hub Interconnect";
-        unit 0 {
-            family inet {
-                address 10.11.11.1/31;
-            }
-        }
-    }
     lo0 {
         unit 0 {
             family inet {
@@ -90,12 +82,6 @@ protocols {
             neighbor 10.101.101.101;
             neighbor 10.101.101.102;
         }
-        group hubs {
-            type internal;
-            import rr-bgp-import;
-            export rr-bgp-exports;
-            neighbor 10.11.11.0;
-        }
     }
 }
 policy-options {
@@ -115,24 +101,6 @@ policy-options {
                 next-hop self;
                 accept;
             }
-        }
-        term last {
-            then reject;
-        }
-    }
-    policy-statement rr-bgp-exports {
-        term 1 {
-            from protocol [ bgp direct ];
-            then accept;
-        }
-        term last {
-            then reject;
-        }
-    }
-    policy-statement rr-bgp-exports {
-        term 1 {
-            from protocol [ bgp direct ];
-            then accept;
         }
         term last {
             then reject;
@@ -301,7 +269,6 @@ security {
             interfaces {
                 lo0.0;
                 ge-0/0/2.0;
-                ge-0/0/3.0
                 st0.0;
             }
         }

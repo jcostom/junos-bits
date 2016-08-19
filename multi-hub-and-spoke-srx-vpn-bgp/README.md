@@ -14,7 +14,7 @@ It's also worth noting that each vSRX has its ge-0/0/0 interface as a management
 As you've surmised, this isn't a 100% real-life configuration, as you won't have WAN-side IP addresses all in the same /24, but you still get the idea.
 
 ## Determinism in Routing
-In networking, deterministic network behavior is often highly prized.  In our example here, the satellite locations all prefer to send their traffic via their VPN tunnels to vsrxhub1. This is being accomplished using a BGP import policy on the satellites.  This policy alters the BGP localpref attribute based on which peer it learned the route from.  To keep this classification process simple, our hubs are adding a BGP community tag to all routes being advertised to the satellites. Each hub is using its own community tag, so it's quite easy to differentiate a route learned from hub1 vs hub2.  In our example, routes learned from hub1 get 50 added to the localpref, and routes learned from hub2 have 50 subtracted from the localpref.  Thus, routes learned from hub1 will have localpref 150, while routes learned from hub2 will have localpref 50.  When comparing localpref values, higher is more desirable, so hub1 will always be preferred over hub2.  Similarly, we subtract 50 on the hubs from routes we learn from the other hub, to ensure that we'll always prefer a direct VPN connection to a spoke site, rather than send via the other hub.
+In networking, deterministic network behavior is often highly prized.  In our example here, the satellite locations all prefer to send their traffic via their VPN tunnels to vsrxhub1. This is being accomplished using a BGP import policy on the satellites.  This policy alters the BGP localpref attribute based on which peer it learned the route from.  To keep this classification process simple, our hubs are adding a BGP community tag to all routes being advertised to the satellites. Each hub is using its own community tag, so it's quite easy to differentiate a route learned from hub1 vs hub2.  In our example, routes learned from hub1 get 50 added to the localpref, and routes learned from hub2 have 50 subtracted from the localpref.  Thus, routes learned from hub1 will have localpref 150, while routes learned from hub2 will have localpref 50.  When comparing localpref values, higher is more desirable, so hub1 will always be preferred over hub2.
 
 ## The View From One of the Hubs
 ```
@@ -31,36 +31,26 @@ root@vsrxhub1> show security ipsec security-associations
   <268173314 ESP:aes-cbc-128/sha256 7f84742d 3430/ unlim - root 500 10.10.10.102
   >268173314 ESP:aes-cbc-128/sha256 e740b41a 3430/ unlim - root 500 10.10.10.102
 
-root@vsrxhub1> show bgp summary
-Groups: 2 Peers: 3 Down peers: 0
-Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
-inet.0                13          6          0          0          0          0
-Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
-10.11.11.1            65000         11         11       0       0        2:38 2/9/9/0              0/0/0/0
-10.100.100.101        65000          8         11       0       0        2:48 2/2/2/0              0/0/0/0
-10.100.100.102        65000         10         12       0       0        2:48 2/2/2/0              0/0/0/0
+  root@vsrxhub1> show bgp summary
+  Groups: 1 Peers: 2 Down peers: 0
+  Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
+  inet.0                 4          4          0          0          0          0
+  Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
+  10.100.100.101        65000          5          6       0       2        1:22 2/2/2/0              0/0/0/0
+  10.100.100.102        65000          6          8       0       2        1:22 2/2/2/0              0/0/0/0
 
-root@vsrxhub1> show route terse protocol bgp
+  root@vsrxhub1> show route terse protocol bgp
 
-inet.0: 15 destinations, 22 routes (15 active, 0 holddown, 0 hidden)
-+ = Active Route, - = Last Active, * = Both
+  inet.0: 11 destinations, 11 routes (11 active, 0 holddown, 0 hidden)
+  + = Active Route, - = Last Active, * = Both
 
-A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
-  10.10.10.0/24      B 170         50            >10.11.11.1       I
-  10.11.11.0/31      B 170         50            >10.11.11.1       I
-* 10.101.101.0/24    B 170         50            >10.11.11.1       I
-* 10.200.200.2/32    B 170         50            >10.11.11.1       I
-* 10.200.200.101/32  B 170        100            >10.100.100.101   I
-                     B 170         50            >10.11.11.1       I
-* 10.200.200.102/32  B 170        100            >10.100.100.102   I
-                     B 170         50            >10.11.11.1       I
-  192.168.1.0/24     B 170         50            >10.11.11.1       I
-* 192.168.101.0/24   B 170        100            >10.100.100.101   I
-                     B 170         50            >10.11.11.1       I
-* 192.168.102.0/24   B 170        100            >10.100.100.102   I
-                     B 170         50            >10.11.11.1       I
+  A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
+  * 10.200.200.101/32  B 170        100            >10.100.100.101   I
+  * 10.200.200.102/32  B 170        100            >10.100.100.102   I
+  * 192.168.101.0/24   B 170        100            >10.100.100.101   I
+  * 192.168.102.0/24   B 170        100            >10.100.100.102   I
 
-management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
+  management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```
 ## The View From One of the Satellites
 ```
@@ -77,32 +67,28 @@ root@vsrxsat1> show security ipsec security-associations
   <131074 ESP:aes-cbc-128/sha256 17933245 3367/ unlim U root 500 10.10.10.2
   >131074 ESP:aes-cbc-128/sha256 9bb2d172 3367/ unlim U root 500 10.10.10.2
 
-root@vsrxsat1> show bgp summary
-Groups: 1 Peers: 2 Down peers: 0
-Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
-inet.0                12          5          0          0          0          0
-Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
-10.100.100.1          65000         12         10       0       0        3:51 5/6/6/0              0/0/0/0
-10.101.101.1          65000         14         11       0       0        3:52 0/6/6/0              0/0/0/0
+  root@vsrxsat1> show bgp summary
+  Groups: 1 Peers: 2 Down peers: 0
+  Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
+  inet.0                 8          5          0          0          0          0
+  Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
+  10.100.100.1          65000         27         23       0       2        5:09 4/4/4/0              0/0/0/0
+  10.101.101.1          65000         46         45       0       0       19:29 1/4/4/0              0/0/0/0
 
-root@vsrxsat1> show route terse protocol bgp
+  root@vsrxsat1> show route terse protocol bgp
 
-inet.0: 14 destinations, 21 routes (14 active, 0 holddown, 0 hidden)
-+ = Active Route, - = Last Active, * = Both
+  inet.0: 14 destinations, 17 routes (14 active, 0 holddown, 0 hidden)
+  + = Active Route, - = Last Active, * = Both
 
-A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
-  10.100.100.0/24    B 170         50            >10.101.101.1     I
-  10.101.101.0/24    B 170        150            >10.100.100.1     I
-* 10.200.200.1/32    B 170        150            >10.100.100.1     I
-                     B 170         50            >10.101.101.1     I
-* 10.200.200.2/32    B 170        150            >10.100.100.1     I
-                     B 170         50            >10.101.101.1     I
-* 10.200.200.102/32  B 170        150            >10.100.100.1     I
-                     B 170         50            >10.101.101.1     I
-* 192.168.1.0/24     B 170        150            >10.100.100.1     I
-                     B 170         50            >10.101.101.1     I
-* 192.168.102.0/24   B 170        150            >10.100.100.1     I
-                     B 170         50            >10.101.101.1     I
+  A Destination        P Prf   Metric 1   Metric 2  Next hop         AS path
+  * 10.200.200.1/32    B 170        150            >10.100.100.1     I
+  * 10.200.200.2/32    B 170         50            >10.101.101.1     I
+  * 10.200.200.102/32  B 170        150            >10.100.100.1     I
+                       B 170         50            >10.101.101.1     I
+  * 192.168.1.0/24     B 170        150            >10.100.100.1     I
+                       B 170         50            >10.101.101.1     I
+  * 192.168.102.0/24   B 170        150            >10.100.100.1     I
+                       B 170         50            >10.101.101.1     I
 
-management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
+  management.inet.0: 2 destinations, 2 routes (2 active, 0 holddown, 0 hidden)
 ```
