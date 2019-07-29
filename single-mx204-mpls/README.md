@@ -38,6 +38,8 @@ chassis {
 }
 ```
 
+If it all doesn't light right up, you may need to trigger a PFE reset. If you're unsure of how to do that, just reboot the system.
+
 ## Topology Being Simulated
 
 * r[1-4]: Core Routers (converged P/PE)
