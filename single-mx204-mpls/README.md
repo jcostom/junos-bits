@@ -50,9 +50,9 @@ If it all doesn't light right up, you may need to trigger a PFE reset. If you're
 
 General rules...
 
-1. Loopbacks are router# x4. In other words, red3 is 13.13.13.13/32.
-2. P-t-P links are all /31 mask, lower IP going to the router with the lower ID # on the diagram. In other words, for the link between r1 and r2, the r1 end is 10.1.2.0/31 and the r2 end is 10.1.2.1/31.
-3. On the EVPN (blue) instance, I didn't bother with loopbacks, and numbered the PE-facing interfaces as 10.200.200.ID/24.` 
+1. Loopbacks are router# x4. In other words, red3 is `13.13.13.13/32`.
+2. P-t-P links are all /31 mask, lower IP going to the router with the lower ID # on the diagram. In other words, for the link between r1 and r2, the r1 end is 10.1.2.0/31 and the r2 end is `10.1.2.1/31`.
+3. On the EVPN (blue) instance, I didn't bother with loopbacks, and numbered the PE-facing interfaces as `10.200.200.ID/24`.
 
 ## Global Router Config
 
