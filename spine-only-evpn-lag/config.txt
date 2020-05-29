@@ -1,0 +1,146 @@
+Example: EVPN-LAG
+
+1. Switches interconnected using a 2-port 40G DAC-based AE 
+    a. Using et-0/0/48 and et-0/0/49 on each switch.
+    b. local switch ae0 interface is 10.0.0.0/31, partner is 10.0.0.1/31.
+    c. local switch lo0.0 is 10.1.1.1/32, partner is 10.1.1.2/32.
+2. OSPF as "underlay" protocol
+3. iBGP as "overlay" protocol for EVPN-VXLAN
+4. EVPN-LAGs configured using xe-0/0/1 (ae1) and xe-0/0/2 (ae2) on each switch.
+
+interfaces {
+    xe-0/0/1 {
+        hold-time up 300 down 0;
+        ether-options {
+            802.3ad ae1;
+        }
+    }
+    xe-0/0/2 {
+        hold-time up 300 down 0;
+        ether-options {
+            802.3ad ae2;
+        }
+    }
+    et-0/0/48 {
+        ether-options {
+            802.3ad ae0;
+        }
+    }
+    et-0/0/49 {
+        ether-options {
+            802.3ad ae0;
+        }
+    }
+    ae0 {
+        mtu 9192;
+        unit 0 {
+            family inet {
+                address 10.0.0.0/31;
+            }
+        }
+    }
+    ae1 {
+        mtu 9192;
+        esi {
+            00:00:00:00:00:00:00:00:00:01;
+            all-active;
+        }
+        aggregated-ether-options {
+            lacp {
+                active;
+                periodic fast;
+                system-id 00:00:00:00:00:01;
+            }
+        }
+        unit 0 {
+            family ethernet-switching {
+                interface-mode trunk;
+                vlan {
+                    members [ v100 v200 ];
+                }
+            }
+        }
+    }
+    ae2 {
+        mtu 9192;
+        esi {
+            00:00:00:00:00:00:00:00:00:02;
+            all-active;
+        }
+        aggregated-ether-options {
+            lacp {
+                active;
+                periodic fast;
+                system-id 00:00:00:00:00:02;
+            }
+        }
+        unit 0 {
+            family ethernet-switching {
+                interface-mode trunk;
+                vlan {
+                    members [ v100 v200 ];
+                }
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.1.1.1/32;
+            }
+        }
+    }
+}
+routing-options {
+    autonomous-system 65000;
+    router-id 10.1.1.1;
+}
+switch-options {
+    vtep-source-interface lo0.0;
+    route-distinguisher 10.1.1.1:1;
+    vrf-target target:65500:1;
+}
+protocols {
+    ospf {
+        area 0.0.0.0 {
+            interface ae0.0;
+            interface lo0.0 {
+                passive;
+            }
+        }
+    }
+    bgp {
+        group iBGP {
+            type internal;
+            local-address 10.1.1.1;
+            family evpn {
+                signaling;
+            }
+            neighbor 10.0.0.1 {
+                bfd-liveness-detection {
+                    minimum-interval 1000;
+                }
+            }
+        }
+    }
+    evpn {
+        encapsulation vxlan;
+        multicast-mode ingress-replication;
+        extended-vni-list all;
+        no-core-isolation;
+    }
+}
+vlans {
+    v100 {
+        vlan-id 100;
+        vxlan {
+            vni 50100;
+        }
+    }
+    v200 {
+        vlan-id 200;
+        vxlan {
+            vni 50200;
+        }
+    }
+}
