@@ -36,3 +36,4 @@ for device in DEVICES:
     for name in names:
         username = name.find('name').text
         print(username)
+        
