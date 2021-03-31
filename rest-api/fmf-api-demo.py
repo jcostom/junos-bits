@@ -5,7 +5,7 @@ from xml.etree import ElementTree as ET
 
 USER="autobot"
 PWD="juniper123"
-DEVICES = ["shire.jasons.org"]
+DEVICES = ["switch1"]
 
 FILTER = """
 <get-config>
