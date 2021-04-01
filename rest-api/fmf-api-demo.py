@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import requests
-from xml.etree import ElementTree as ET
+import xmltodict
+import json
 
 USER="autobot"
 PWD="juniper123"
-DEVICES = ["switch1"]
+DEVICES = ["switch1","switch2"]
 
 FILTER = """
 <get-config>
@@ -22,18 +23,23 @@ FILTER = """
 </get-config>
 """
 
+print("----------------------------------------------------------------------")
+
 for device in DEVICES:
     reply = requests.post("http://{}:3001/rpc".format(device),data=FILTER,
         auth=requests.auth.HTTPBasicAuth(USER, PWD),
         headers={"Accept": "application/xml","Content-Type": "application/xml"})
+    
+    print("Device {} has the following locally-defined users:\n".format(device))
+    
+    # I'm literally the worst at maninpulating XML, so I'm going to totally cheat
+    # by converting it to JSON. #winning
 
-    XML_lines = "\n".join(reply.text.splitlines()[3:-1])
-    root = ET.fromstring(XML_lines)
+    # Chop off superfluous top & bottom
+    # goodStuff = '\n'.join(reply.text.split('\n')[4:-3])
+    replyDict = xmltodict.parse('\n'.join(reply.text.split('\n')[4:-3]))
+    for username in replyDict['configuration']['system']['login']['user']:
+        print(username['name'])
 
-    print("\nDevice: {} has the following usernames in its local DB:"
-          .format(device))
-    names = root.findall('.//user')
-    for name in names:
-        username = name.find('name').text
-        print(username)
-        
+    print("----------------------------------------------------------------------")
+
